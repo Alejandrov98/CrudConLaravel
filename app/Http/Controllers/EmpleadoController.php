@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Empleado;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;// gpt me parecia que debia importarlo, debo estar atento el error dice use  unkown class
+use Illuminate\Support\Facades\Storage; // gpt me parecia que debia importarlo, debo estar atento el error dice use  unkown class
 
 
 class EmpleadoController extends Controller
@@ -15,7 +15,7 @@ class EmpleadoController extends Controller
     public function index()
     {
         //
-        $datos['empleados'] = Empleado::paginate(5); // guardamos en una variable empleados y paginamos a 5 items por pagina
+        $datos['empleados'] = Empleado::paginate(1); // guardamos en una variable empleados y paginamos a 5 items por pagina
         return view("empleado.index", $datos); //2do argumento es para pasarle la informacion
     }
 
@@ -33,6 +33,23 @@ class EmpleadoController extends Controller
      */
     public function store(Request $request) // Recibe toda la informacion y la prepara para acceder o Guardar
     {
+        $campos = [ // esto lo necesitamos post bootstrap
+            'Nombre' => 'required|string|max:100',
+            'ApellidoPaterno' => 'required|string|max:100',
+            'ApellidoMaterno' => 'required|string|max:100',
+            'Correo' => 'required|email',
+            'Foto' => 'required|max:10000|mimes:jpeg,png,jpg',
+        ];
+        $mensaje = [
+            'required' => 'El :attribute es requerido',
+            'Foto.required' => 'La foto es requerida',
+        ];
+
+        $this->validate($request, $campos, $mensaje);
+
+
+
+
         // Obtiene todos los datos de la solicitud HTTP
         //$datosEmpleado = request()->all();
 
@@ -49,7 +66,9 @@ class EmpleadoController extends Controller
         Empleado::insert($datosEmpleado); // lo inserta de esta forma directamente en la DB
 
         // Devuelve los datos del empleado en formato JSON
-        return response()->json($datosEmpleado);
+        // return response()->json($datosEmpleado); //comentamos por que no hay necesidad ya de devolverlo
+
+        return redirect('empleado')->with('mensaje', 'Empleado agregado con Exito.'); // mensaje viene del @ pasado en el index
     }
 
     /**
@@ -75,6 +94,24 @@ class EmpleadoController extends Controller
      */
     public function update(Request $request, $id)
     {
+
+        $campos = [ // esto lo necesitamos post bootstrap
+            'Nombre' => 'required|string|max:100',
+            'ApellidoPaterno' => 'required|string|max:100',
+            'ApellidoMaterno' => 'required|string|max:100',
+            'Correo' => 'required|email',
+        ];
+        $mensaje = [
+            'required' => 'El :attribute es requerido',
+        ];
+
+        if ($request->hasFile('Foto')) {
+            $campos = ['Foto' => 'required|max:10000|mimes:jpeg,png,jpg',];
+            $mensaje = ['Foto.required' => 'La foto es requerida',];
+        }
+
+
+        $this->validate($request, $campos, $mensaje);
         //
         $datosEmpleado = request()->except(['_token', '_method']);
         if ($request->hasFile('Foto')) {
@@ -84,7 +121,9 @@ class EmpleadoController extends Controller
 
         EMPLEADO::where('id', '=', $id)->update($datosEmpleado);
         $empleado = Empleado::findOrFail($id);
-        return view('empleado.edit', compact('empleado'));
+        // return view('empleado.edit', compact('empleado'));
+        return redirect('empleado')->with('mensaje', 'Empleado Modificado.');
+
 
 
     }
@@ -98,10 +137,11 @@ class EmpleadoController extends Controller
         //debemos saber que foto vamos a borrar
         $empleado = Empleado::findOrFail($id);
         // Si exista va a borrar la informacion en la carpeta public esa foto
-        if(Storage::delete('public/'.$empleado->Foto )); {
+        if (Storage::delete('public/' . $empleado->Foto))
+            ; {
 
             Empleado::destroy($id);
         }
-        return redirect('empleado');
+        return redirect('empleado')->with('mensaje', 'Empleado Borrado .');
     }
 }
